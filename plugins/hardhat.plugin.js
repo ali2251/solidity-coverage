@@ -63,6 +63,7 @@ task(TASK_COMPILE_SOLIDITY_GET_COMPILATION_JOB_FOR_FILE).setAction(async (_, __,
         yulDetails: {
             stackAllocation: true,
         },
+};
   }
   return compilationJob;
 });
