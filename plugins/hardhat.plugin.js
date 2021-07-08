@@ -58,6 +58,11 @@ task(TASK_COMPILE_SOLIDITY_GET_COMPILATION_JOB_FOR_FILE).setAction(async (_, __,
     settings.metadata.useLiteralContent = false;
     // Override optimizer settings for all compilers
     settings.optimizer.enabled = false;
+    settings.optimizer.details = {
+        yul: true,
+        yulDetails: {
+            stackAllocation: true,
+        },
   }
   return compilationJob;
 });
