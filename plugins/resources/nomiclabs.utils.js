@@ -1,10 +1,10 @@
-const shell = require('shelljs');
-const globby = require('globby');
+const shell = require("shelljs");
+const globby = require("globby");
 const pluginUtils = require("./plugin.utils");
-const path = require('path');
-const DataCollector = require("./../../lib/collector")
-const semver = require("semver")
-const util = require('util')
+const path = require("path");
+const DataCollector = require("./../../lib/collector");
+const semver = require("semver");
+const util = require("util");
 
 // =============================
 // Nomiclabs Plugin Utils
@@ -15,12 +15,12 @@ const util = require('util')
  * @param  {String}   files   file or glob
  * @return {String[]}         list of files to pass to mocha
  */
-function getTestFilePaths(files){
-  const target = globby.sync([files])
+function getTestFilePaths(files) {
+  const target = globby.sync([files]);
 
   // Buidler/Hardhat supports js & ts
   const testregex = /.*\.(js|ts)$/;
-  return target.filter(f => f.match(testregex) != null);
+  return target.filter((f) => f.match(testregex) != null);
 }
 
 /**
@@ -29,54 +29,56 @@ function getTestFilePaths(files){
  * @param  {Buidler/HardhatConfig} config
  * @return {Buidler/HardhatConfig}        updated config
  */
-function normalizeConfig(config, args={}){
+function normalizeConfig(config, args = {}) {
   config.workingDir = config.paths.root;
   config.contractsDir = config.paths.sources;
   config.testDir = config.paths.tests;
   config.artifactsDir = config.paths.artifacts;
-  config.logger = config.logger ? config.logger : {log: null};
-  config.solcoverjs = args.solcoverjs
-  config.gasReporter = { enabled: false }
+  config.logger = config.logger ? config.logger : { log: null };
+  config.solcoverjs = args.solcoverjs;
+  config.gasReporter = { enabled: false };
 
   try {
-    const hardhatPackage = require('hardhat/package.json');
-    if (semver.gt(hardhatPackage.version, '2.0.3')){
+    const hardhatPackage = require("hardhat/package.json");
+    if (semver.gt(hardhatPackage.version, "2.0.3")) {
       config.useHardhatDefaultPaths = true;
     }
-  } catch(e){ /* ignore */ }
+  } catch (e) {
+    /* ignore */
+  }
 
   return config;
 }
 
-function setupBuidlerNetwork(env, api, ui){
-  const { createProvider } = require("@nomiclabs/buidler/internal/core/providers/construction");
+function setupBuidlerNetwork(env, api, ui) {
+  const {
+    createProvider,
+  } = require("@nomiclabs/buidler/internal/core/providers/construction");
 
   let networkConfig = {};
 
-  let networkName = (env.buidlerArguments.network !== 'buidlerevm')
-    ? env.buidlerArguments.network
-    : api.defaultNetworkName;
+  let networkName =
+    env.buidlerArguments.network !== "buidlerevm"
+      ? env.buidlerArguments.network
+      : api.defaultNetworkName;
 
-  if (networkName !== api.defaultNetworkName){
+  if (networkName !== api.defaultNetworkName) {
     networkConfig = env.config.networks[networkName];
-    configureHttpProvider(networkConfig, api, ui)
+    configureHttpProvider(networkConfig, api, ui);
   } else {
-    networkConfig.url = `http://${api.host}:${api.port}`
+    networkConfig.url = `http://${api.host}:${api.port}`;
   }
 
   const provider = createProvider(networkName, networkConfig);
 
-  return configureNetworkEnv(
-    env,
-    networkName,
-    networkConfig,
-    provider
-  )
+  return configureNetworkEnv(env, networkName, networkConfig, provider);
 }
 
-function setupHardhatNetwork(env, api, ui){
-  const { createProvider } = require("hardhat/internal/core/providers/construction");
-  const { HARDHAT_NETWORK_NAME } = require("hardhat/plugins")
+function setupHardhatNetwork(env, api, ui) {
+  const {
+    createProvider,
+  } = require("hardhat/internal/core/providers/construction");
+  const { HARDHAT_NETWORK_NAME } = require("hardhat/plugins");
 
   let provider, networkName, networkConfig;
   let isHardhatEVM = false;
@@ -84,7 +86,7 @@ function setupHardhatNetwork(env, api, ui){
   networkName = env.hardhatArguments.network || HARDHAT_NETWORK_NAME;
 
   // HardhatEVM
-  if (networkName === HARDHAT_NETWORK_NAME){
+  if (networkName === HARDHAT_NETWORK_NAME) {
     isHardhatEVM = true;
 
     networkConfig = env.network.config;
@@ -94,17 +96,17 @@ function setupHardhatNetwork(env, api, ui){
       networkName,
       networkConfig,
       env.config.paths,
-      env.artifacts,
-    )
+      env.artifacts
+    );
 
-  // HttpProvider
+    // HttpProvider
   } else {
-    if (!(env.config.networks && env.config.networks[networkName])){
-      throw new Error(ui.generate('network-fail', [networkName]))
+    if (!(env.config.networks && env.config.networks[networkName])) {
+      throw new Error(ui.generate("network-fail", [networkName]));
     }
-    networkConfig = env.config.networks[networkName]
+    networkConfig = env.config.networks[networkName];
     configureNetworkGas(networkConfig, api);
-    configureHttpProvider(networkConfig, api, ui)
+    configureHttpProvider(networkConfig, api, ui);
     provider = createProvider(networkName, networkConfig);
   }
 
@@ -114,31 +116,35 @@ function setupHardhatNetwork(env, api, ui){
     networkConfig,
     provider,
     isHardhatEVM
-  )
+  );
 }
 
-function configureNetworkGas(networkConfig, api){
-  networkConfig.gas =  api.gasLimit;
+function configureNetworkGas(networkConfig, api) {
+  networkConfig.gas = api.gasLimit;
   networkConfig.gasPrice = api.gasPrice;
 }
 
-function configureHardhatEVMGas(networkConfig, api){
+function configureHardhatEVMGas(networkConfig, api) {
   networkConfig.allowUnlimitedContractSize = true;
   networkConfig.blockGasLimit = api.gasLimitNumber;
-  networkConfig.gas =  api.gasLimit;
+  networkConfig.gas = api.gasLimit;
   networkConfig.gasPrice = api.gasPrice;
 }
 
-function configureNetworkEnv(env, networkName, networkConfig, provider, isHardhatEVM){
+function configureNetworkEnv(
+  env,
+  networkName,
+  networkConfig,
+  provider,
+  isHardhatEVM
+) {
   env.config.networks[networkName] = networkConfig;
   env.config.defaultNetwork = networkName;
 
-  env.network = {
-    name: networkName,
-    config: networkConfig,
-    provider: provider,
-    isHardhatEVM: isHardhatEVM
-  }
+  env.network.name = networkName;
+  env.network.config = networkConfig;
+  env.network.provider = provider;
+  env.network.isHardhatEVM = isHardhatEVM;
 
   env.ethereum = provider;
 
@@ -151,12 +157,12 @@ function configureNetworkEnv(env, networkName, networkConfig, provider, isHardha
  * @param  {Object} networkConfig
  * @param  {SolidityCoverage} api
  */
-function configureHttpProvider(networkConfig, api, ui){
-  const configPort = networkConfig.url.split(':')[2];
+function configureHttpProvider(networkConfig, api, ui) {
+  const configPort = networkConfig.url.split(":")[2];
 
   // Warn: port conflicts
-  if (api.port !== api.defaultPort && api.port !== configPort){
-    ui.report('port-clash', [ configPort ])
+  if (api.port !== api.defaultPort && api.port !== configPort) {
+    ui.report("port-clash", [configPort]);
   }
 
   // Prefer network port
@@ -170,8 +176,8 @@ function configureHttpProvider(networkConfig, api, ui){
  * @param {env} config
  * @param {Array}         accounts
  */
-function setNetworkFrom(networkConfig, accounts){
-  if (!networkConfig.from){
+function setNetworkFrom(networkConfig, accounts) {
+  if (!networkConfig.from) {
     networkConfig.from = accounts[0];
   }
 }
@@ -182,8 +188,8 @@ function setNetworkFrom(networkConfig, accounts){
  * @param  {BuidlerConfig} config
  * @return {String}        .../.coverage_cache
  */
-function tempCacheDir(config){
-  return path.join(config.paths.root, '.coverage_cache');
+function tempCacheDir(config) {
+  return path.join(config.paths.root, ".coverage_cache");
 }
 
 /**
@@ -192,20 +198,18 @@ function tempCacheDir(config){
  * @param  {SolidityCoverage}  api
  * @return {Promise}
  */
-async function finish(config, api, shouldKill){
-  const {
-    tempContractsDir,
-    tempArtifactsDir
-  } = pluginUtils.getTempLocations(config);
+async function finish(config, api, shouldKill) {
+  const { tempContractsDir, tempArtifactsDir } =
+    pluginUtils.getTempLocations(config);
 
   shell.config.silent = true;
-  shell.rm('-Rf', tempContractsDir);
-  shell.rm('-Rf', tempArtifactsDir);
-  shell.rm('-Rf', path.join(config.paths.root, '.coverage_cache'));
+  shell.rm("-Rf", tempContractsDir);
+  shell.rm("-Rf", tempArtifactsDir);
+  shell.rm("-Rf", path.join(config.paths.root, ".coverage_cache"));
   shell.config.silent = false;
 
   if (api) await api.finish();
-  if (shouldKill) process.exit(1)
+  if (shouldKill) process.exit(1);
 }
 
 module.exports = {
@@ -215,6 +219,5 @@ module.exports = {
   setupBuidlerNetwork,
   setupHardhatNetwork,
   getTestFilePaths,
-  setNetworkFrom
-}
-
+  setNetworkFrom,
+};
